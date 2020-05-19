@@ -1,0 +1,9 @@
+# GRN_model
+
+This repository contains the files to perform simulations of the evolution of gene regualtory networks. It uses a variant of a model developed by Andreas Wagner in 1994 (Wagner 1994, PNAS). The simulations are written in Julia 1.0.
+
+To run the simulations and perform analyses of the results, run the files in the following order:
+  1. Run sim.jl to perform the simulations. 
+  2. Run landscape_analysis.jl to calculate the fitness landscape of evolved networks
+  3. Run analysis.jl to calculate statistics of the evolved networks, including data generated in the previous step.
+  4. Run combine_analysis.jl to combine the CSV files generated in step 3 into one file.
