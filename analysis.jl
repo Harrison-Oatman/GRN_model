@@ -28,6 +28,7 @@ function main()
     results = Dict{String,Any}()
 
     treatment = analysis_dict["treatment"]
+
     replicate_names = [dir for dir in readdir(treatment) if occursin("replicate",dir)]
     for rep in replicate_names
 
@@ -37,7 +38,7 @@ function main()
 
         for experiment in ["hybrid_ancestor","ancestor_1","ancestor_2",
                            "reduced_ancestor_1","reduced_ancestor_2",
-                           "neutral_separate_evolved",
+                           "neutral_seperate_evolved",
                            "neutral_combined_evolved"]
 
             results[rep][experiment] = Dict{String,Any}()
@@ -108,26 +109,37 @@ function main()
                 results[rep][experiment]["change_anc_total_interactions"] = -1
                 results[rep][experiment]["change_alt_total_interactions"] = -1
 
+                results[rep][experiment]["alt_neut_interactions"] = -1
+                results[rep][experiment]["anc_neut_interactions"] = -1
+                results[rep][experiment]["change_alt_neut_interactions"] = -1
+                results[rep][experiment]["change_anc_neut_interactions"] = -1
+                results[rep][experiment]["alt_essential_interactions"] = -1
+                results[rep][experiment]["anc_essential_interactions"] = -1
+                results[rep][experiment]["change_alt_essential_interactions"] = -1
+                results[rep][experiment]["change_anc_essential_interactions"] = -1
+
                 results[rep][experiment]["module_interaction_fitness"] = -1
 
                 #results[rep][experiment]["min_complexity"] = -1
                 #results[rep][experiment]["percent_complexity"] = -1
             else
                 num_genes = convert(Int64,length(grn[1,:])/2)
+                trait_1_genes = collect(1:1:num_genes)
+                trait_2_genes = collect(num_genes+1:1:num_genes*2)
 
-                gpleio,percent_gpleio = measure_functional_pleiotropy(treatment*"/"*rep*"/"*experiment*"_landscape_genes.csv",collect(1:1:num_genes),collect(num_genes+1:1:num_genes*2))
+                gpleio,percent_gpleio = measure_functional_pleiotropy(treatment*"/"*rep*"/"*experiment*"_landscape_genes.csv",trait_1_genes,trait_2_genes)
                 results[rep][experiment]["funcpleio_genes"] = gpleio
                 results[rep][experiment]["percent_funcpleio_genes"] = percent_gpleio
                 results[rep][experiment]["change_funcpleio_genes"] = gpleio-results[rep]["hybrid_ancestor"]["funcpleio_genes"]
                 results[rep][experiment]["change_percent_funcpleio_genes"] = percent_gpleio-results[rep]["hybrid_ancestor"]["percent_funcpleio_genes"]
 
-                pleio,percent_pleio = measure_functional_pleiotropy(treatment*"/"*rep*"/"*experiment*"_landscape_interactions.csv",collect(1:1:num_genes),collect(num_genes+1:1:num_genes*2))
+                pleio,percent_pleio = measure_functional_pleiotropy(treatment*"/"*rep*"/"*experiment*"_landscape_interactions.csv",trait_1_genes,trait_2_genes)
                 results[rep][experiment]["funcpleio_interactions"] = pleio
                 results[rep][experiment]["percent_funcpleio_interactions"] = percent_pleio
                 results[rep][experiment]["change_funcpleio_interactions"] = pleio-results[rep]["hybrid_ancestor"]["funcpleio_interactions"]
                 results[rep][experiment]["change_percent_funcpleio_interactions"] = percent_pleio-results[rep]["hybrid_ancestor"]["percent_funcpleio_interactions"]
 
-                panc,nanc,palt,nalt = measure_trait_connectivity(grn,collect(1:1:num_genes),collect(num_genes+1:1:num_genes*2))
+                panc,nanc,palt,nalt = measure_trait_connectivity(grn,trait_1_genes,trait_2_genes)
                 @assert panc+nanc+palt+nalt == results[rep][experiment]["total_interactions"]
                 results[rep][experiment]["alt_pos_interactions"] = palt
                 results[rep][experiment]["alt_neg_interactions"] = nalt
@@ -142,7 +154,18 @@ function main()
                 results[rep][experiment]["change_alt_total_interactions"] = palt+nalt-results[rep]["hybrid_ancestor"]["alt_total_interactions"]
                 results[rep][experiment]["change_anc_total_interactions"] = panc+nanc-results[rep]["hybrid_ancestor"]["anc_total_interactions"]
 
-                results[rep][experiment]["module_interaction_fitness"] = measure_module_interaction(S_0,grn,collect(1:1:num_genes),collect(num_genes+1:1:num_genes*2))
+                anc_neut,p_anc_neut,alt_neut,p_alt_neut = measure_redundancy(treatment*"/"*rep*"/"*experiment*"_landscape_interactions.csv",trait_1_genes,trait_2_genes)
+                @assert anc_neut+alt_neut == results[rep][experiment]["neut_interactions"]
+                results[rep][experiment]["alt_neut_interactions"] = alt_neut
+                results[rep][experiment]["anc_neut_interactions"] = anc_neut
+                results[rep][experiment]["change_alt_neut_interactions"] = alt_neut - results[rep]["hybrid_ancestor"]["alt_neut_interactions"]
+                results[rep][experiment]["change_anc_neut_interactions"] = anc_neut - results[rep]["hybrid_ancestor"]["anc_neut_interactions"]
+                results[rep][experiment]["alt_essential_interactions"] = results[rep][experiment]["alt_total_interactions"] - results[rep][experiment]["alt_neut_interactions"]
+                results[rep][experiment]["anc_essential_interactions"] = results[rep][experiment]["anc_total_interactions"] - results[rep][experiment]["anc_neut_interactions"]
+                results[rep][experiment]["change_alt_essential_interactions"] = results[rep][experiment]["alt_essential_interactions"] - results[rep]["hybrid_ancestor"]["alt_essential_interactions"]
+                results[rep][experiment]["change_anc_essential_interactions"] = results[rep][experiment]["anc_essential_interactions"] - results[rep]["hybrid_ancestor"]["anc_essential_interactions"]
+
+                results[rep][experiment]["module_interaction_fitness"] = measure_module_interaction(S_0,grn,trait_1_genes,trait_2_genes)
 
                 #min,min_percent = measure_network_complexity(S_0,grn,30)
                 #results[rep][experiment]["min_complexity"] = min
@@ -174,7 +197,7 @@ function main()
             end
             if first_line
                 write(f,first_line_string*"\n")
-                global first_line = false
+                first_line = false
             end
             write(f,line_string*"\n")
         end

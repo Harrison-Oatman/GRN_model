@@ -31,7 +31,7 @@ function user_input!(param::ConfParse)
         for i=1:convert(Int64,length(ARGS)/3)
             @assert ARGS[(i-1)*3+1] == "-set" "Error with ARG "*string(i)*" -set"
             try
-                commit!(conf,ARGS[(i-1)*3+2],ARGS[(i-1)*3+3])
+                commit!(param,ARGS[(i-1)*3+2],ARGS[(i-1)*3+3])
             catch
                 println("Unable to set ARG "*string(ARGS[(i-1)*3+2])*" to "*ARGS[(i-1)*3+3])
             end
@@ -270,6 +270,7 @@ function calc_fitness(sigma::Float64,stability::Bool,S_opt::Array{Float64,1},
     #stable GRNs have the same fitness.
     if sigma == Inf || sigma == -Inf
         return 1.0
+    end
     #Otherwise, use symmetric expoential fitness function based on distance to
     #optimum
     return exp(-1*dist(S_opt,S_final)/sigma)

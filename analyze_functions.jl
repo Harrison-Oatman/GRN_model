@@ -76,6 +76,78 @@ function measure_redundancy(filename::String)
     return neutral,neutral/total
 end
 
+function measure_redundancy(filename::String,trait_1_genes::Array{Int64,1},
+                            trait_2_genes::Array{Int64,1})
+
+    """
+    Purpose: This function measures how many interactions, and what
+    percentage of interactions, have no effect on fitness when knocked-out
+    across all starting gene states separately for interactions with a gene
+    network and interactions between networks.
+
+    Inputs:
+            filename: fitness landscape file
+            trait_1_genes: list of genes that are ancestrally involved in trait 1
+            trait_2_genes: list of genes that are ancestrally involved in trait 2
+    Outputs:
+            1) Number of interactions with no effect on fitness when KO'd among
+            within-network interactions
+            2) Percent of interactions with no effect on fitness when K0'd among
+            within-network interactions
+            3) Number of interactions with no effect on fitness when KO'd among
+            between-network interactions
+            4) Percent of interactions with no effect on fitness when K0'd among
+            between-network interactions
+    """
+
+    @assert occursin("interactions",filename)
+
+    df = CSV.read(filename)
+    df_mutants = df[df.Column .!= 0,:] #eliminate ancestor
+    df_nonzero = df_mutants[df_mutants.Value .!= 0.0,:] #eliminate non-existent interactions
+
+    anc_total = 0
+    anc_neut = 0
+
+    alt_total = 0
+    alt_neut = 0
+
+    for row in trait_1_genes
+        df_row = df_nonzero[df_nonzero.Row .== row,:]
+        for col in trait_1_genes
+            df_col = df_row[df_row.Column .== col,:]
+            fitness_values = df_col[:,:Fitness]
+            anc_total += length(fitness_values)
+            anc_neut += count(x->x==1.0,fitness_values)
+        end
+        for col in trait_2_genes
+            df_col = df_row[df_row.Column .== col,:]
+            fitness_values = df_col[:,:Fitness]
+            alt_total += length(fitness_values)
+            alt_neut += count(x->x==1.0,fitness_values)
+        end
+    end
+
+    for row in trait_2_genes
+        df_row = df_nonzero[df_nonzero.Row .== row,:]
+        for col in trait_1_genes
+            df_col = df_row[df_row.Column .== col,:]
+            fitness_values = df_col[:,:Fitness]
+            alt_total += length(fitness_values)
+            alt_neut += count(x->x==1.0,fitness_values)
+        end
+        for col in trait_2_genes
+            df_col = df_row[df_row.Column .== col,:]
+            fitness_values = df_col[:,:Fitness]
+            anc_total += length(fitness_values)
+            anc_neut += count(x->x==1.0,fitness_values)
+        end
+    end
+
+
+    return anc_neut,anc_total,alt_neut,alt_total
+end
+
 function measure_functional_pleiotropy(filename::String,
                                        trait_1_genes::Array{Int64,1},
                                        trait_2_genes::Array{Int64,1})
