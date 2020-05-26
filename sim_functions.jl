@@ -62,7 +62,7 @@ function create_ancestor(params::Dict{String,Any})
     trial_ct = 1
     #sum(ancestor_S_final) ensures ancestor_S_final is not the 0 vector
     #This only works when gene values can be either 0.0 or 1.0
-    while ancestor_grn_stability == false && sum(ancestor_S_final) > 0.0
+    while ancestor_grn_stability == false || sum(ancestor_S_final) == 0.0
         ancestor_grn = generate_random_grn(params)
         ancestor_grn_stability, ancestor_S_final = assess_stability(ancestor_grn,S_0)
         trial_ct += 1
@@ -462,7 +462,6 @@ function neutral_evolve(genotype::Genotype,
                         mu_values["gain"]*z]
 
     relative_mu_values = [actual_mu_values[i]/sum(actual_mu_values) for i=1:3]
-
     mutant_found = false
     while mutant_found == false
         mutant_type = sample(["loss","change","gain"],Weights(relative_mu_values))
@@ -570,7 +569,7 @@ end
 function run_sim(params::Dict{String,Any})
     """
     Purpose: This function runs 1 replicate of this simulation for the following
-    three scenarios: separate neutral evolution and combined neutral evolution.
+    two scenarios: separate neutral evolution and combined neutral evolution.
 
     Inputs: A dictionary containing all experiments parameters from the sim.cfg
     file
