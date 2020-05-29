@@ -21,10 +21,15 @@ function main()
         current_dir = treatment*"/"*rep
         println(current_dir)
 
-        for experiment in ["hybrid_ancestor","ancestor_1","ancestor_2",
+        experiment_list = ["hybrid_ancestor","ancestor_1","ancestor_2",
                            "reduced_ancestor_1","reduced_ancestor_2",
                            "neutral_separate_evolved",
                            "neutral_combined_evolved"]
+        if occursin("Control",treatment)
+            experiment_list = ["ancestor","evolved"]
+        end
+
+        for experiment in experiment_list
 
             S_0 = load(current_dir*"/"*experiment*"_S_0.dat")
             grn = load(current_dir*"/"*experiment*"_GRN.dat")

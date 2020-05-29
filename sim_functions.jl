@@ -72,6 +72,45 @@ function create_ancestor(params::Dict{String,Any})
     return S_0,ancestor_grn,ancestor_S_final
 end
 
+function create_sep_ancestors(params::Dict{String,Any})
+    """
+    Goal: Create a genotype by randomly generating an array of initial gene
+    states, then repeatedly generate random grns, until discovers a grn and
+    corresponding final gene state that is stable and non-zero.
+
+    Inputs:
+        1. params: dictionary of parameters for the simulation
+
+    Outputs:
+        1. S_0: randomly-generated inital gene state vector
+        2. ancestor_grn: randomly-generated gene regulatory network that results
+           in a non-zero stable final gene state
+        3. ancestor_S_final: the final gene state vector
+    """
+
+    S_0_1 = rand([0.0,1.0],convert(Int64,params["genes"]/2))
+    S_0_1 = vcat(S_0_1,[0.0 for i=1:params["genes"]/2])
+
+    S_0_2 = [0.0 for i=1:params["genes"]/2]
+    S_0_2 = vcat(S_0_2,rand([0.0,1.0],convert(Int64,params["genes"]/2)))
+
+    ancestor_grn = generate_random_grn(params)
+    ancestor_grn_stability_1, ancestor_S_final_1 = assess_stability(ancestor_grn,S_0_1)
+    ancestor_grn_stability_2, ancestor_S_final_2 = assess_stability(ancestor_grn,S_0_2)
+    trial_ct = 1
+    #sum(ancestor_S_final) ensures ancestor_S_final is not the 0 vector
+    #This only works when gene values can be either 0.0 or 1.0
+    while ancestor_grn_stability_1 == false || sum(ancestor_S_final_1) == 0.0 || ancestor_grn_stability_2 == false || sum(ancestor_S_final_2) == 0.0
+        ancestor_grn = generate_random_grn(params)
+        ancestor_grn_stability_1, ancestor_S_final_1 = assess_stability(ancestor_grn,S_0_1)
+        ancestor_grn_stability_2, ancestor_S_final_2 = assess_stability(ancestor_grn,S_0_2)
+        trial_ct += 1
+    end
+    save(params["treatment"]*"/replicate_"*string(params["random_seed"]),
+         "num_ancestor_trials","Ancestor_Trials",trial_ct)
+    return [S_0_1,S_0_2],ancestor_grn,[ancestor_S_final_1,ancestor_S_final_2]
+end
+
 function save(dir::String,filename::String,S_0::Array{Float64,1},
               grn::Array{Float64,2},S_final::Array{Float64,1})
       """
@@ -223,6 +262,67 @@ function save(dir::String,filename::String,S_0::Array{Array{Float64,1}},
           write(f,string(fixed_mutations[j].location)*",")
           write(f,string(fixed_mutations[j].ancestral_value)*",")
           write(f,string(fixed_mutations[j].new_value))
+      end
+      close(f)
+end
+
+function save(dir::String,filename::String,S_0::Array{Array{Float64,1}},
+              grn::Array{Float64,2},S_final::Array{Array{Float64,1}})
+
+      """
+      Goal: This function performs the save function as above but without
+      requiring a list of saved mutations.
+
+      Inputs:
+        1. dir: directory in which to save files
+        2. filename: string to start file names (usually the experiment name)
+        3. S_0: array of array of initial gene states
+        4. grn: gene regulatory network matrix
+        5. S_final: array of array of final gene states
+      """
+
+      @assert isdir(dir)
+      N = length(S_0[1])
+
+      f = open(dir*"/"*filename*"_S_0.dat","w")
+      for j=1:length(S_0)
+          if j!= 1
+              write(f,"\n")
+          end
+          for k=1:N
+              if k!=1
+                  write(f,",")
+              end
+              write(f,string(S_0[j][k]))
+          end
+      end
+      close(f)
+
+      f = open(dir*"/"*filename*"_GRN.dat","w")
+      for j=1:N
+          if j!= 1
+              write(f,"\n")
+          end
+          for k=1:N
+              if k!=1
+                  write(f,",")
+              end
+              write(f,string(grn[j,k]))
+          end
+      end
+      close(f)
+
+      f = open(dir*"/"*filename*"_S_final.dat","w")
+      for j=1:length(S_final)
+          if j!= 1
+              write(f,"\n")
+          end
+          for k=1:N
+              if k!=1
+                  write(f,",")
+              end
+              write(f,string(S_final[j][k]))
+          end
       end
       close(f)
 end

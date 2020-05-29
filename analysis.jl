@@ -36,10 +36,17 @@ function main()
         current_dir = treatment*"/"*rep
         println(current_dir)
 
-        for experiment in ["hybrid_ancestor","ancestor_1","ancestor_2",
+        experiment_list = ["hybrid_ancestor","ancestor_1","ancestor_2",
                            "reduced_ancestor_1","reduced_ancestor_2",
                            "neutral_seperate_evolved",
                            "neutral_combined_evolved"]
+        change_exp_basis = "hybrid_ancestor"
+        if occursin("Control",treatment)
+            experiment_list = ["ancestor","evolved"]
+            change_exp_basis = "ancestor"
+        end
+
+        for experiment in experiment_list
 
             results[rep][experiment] = Dict{String,Any}()
             S_0 = load(current_dir*"/"*experiment*"_S_0.dat")
@@ -53,37 +60,35 @@ function main()
             results[rep][experiment]["total_interactions"] = p+n
             results[rep][experiment]["connectivity_density"] = (p+n)/(genes^2)
             results[rep][experiment]["mean_connectivity"] = (p+n)/(genes)
-
-            results[rep][experiment]["change_pos_interactions"] = p-results[rep]["hybrid_ancestor"]["pos_interactions"]
-            results[rep][experiment]["change_neg_interactions"] = n-results[rep]["hybrid_ancestor"]["neg_interactions"]
-            results[rep][experiment]["change_zero_interactions"] = z-results[rep]["hybrid_ancestor"]["zero_interactions"]
-            results[rep][experiment]["change_total_interactions"] = p+n-results[rep]["hybrid_ancestor"]["total_interactions"]
-            results[rep][experiment]["change_connectivity_density"] = (p+n)/(genes^2)-results[rep]["hybrid_ancestor"]["connectivity_density"]
-            results[rep][experiment]["change_mean_connectivity"] = (p+n)/(genes)-results[rep]["hybrid_ancestor"]["mean_connectivity"]
-
             results[rep][experiment]["percent_pos_interactions"] = p/(p+n+z)
             results[rep][experiment]["percent_neg_interactions"] = n/(p+n+z)
             results[rep][experiment]["percent_zero_interactions"] = z/(p+n+z)
 
-            results[rep][experiment]["change_percent_pos_interactions"] = (p/(p+n+z))-results[rep]["hybrid_ancestor"]["percent_pos_interactions"]
-            results[rep][experiment]["change_percent_neg_interactions"] = (n/(p+n+z))-results[rep]["hybrid_ancestor"]["percent_neg_interactions"]
-            results[rep][experiment]["change_percent_zero_interactions"] = (z/(p+n+z))-results[rep]["hybrid_ancestor"]["percent_zero_interactions"]
+            results[rep][experiment]["change_pos_interactions"] = p-results[rep][change_exp_basis]["pos_interactions"]
+            results[rep][experiment]["change_neg_interactions"] = n-results[rep][change_exp_basis]["neg_interactions"]
+            results[rep][experiment]["change_zero_interactions"] = z-results[rep][change_exp_basis]["zero_interactions"]
+            results[rep][experiment]["change_total_interactions"] = p+n-results[rep][change_exp_basis]["total_interactions"]
+            results[rep][experiment]["change_connectivity_density"] = (p+n)/(genes^2)-results[rep][change_exp_basis]["connectivity_density"]
+            results[rep][experiment]["change_mean_connectivity"] = (p+n)/(genes)-results[rep][change_exp_basis]["mean_connectivity"]
+            results[rep][experiment]["change_percent_pos_interactions"] = (p/(p+n+z))-results[rep][change_exp_basis]["percent_pos_interactions"]
+            results[rep][experiment]["change_percent_neg_interactions"] = (n/(p+n+z))-results[rep][change_exp_basis]["percent_neg_interactions"]
+            results[rep][experiment]["change_percent_zero_interactions"] = (z/(p+n+z))-results[rep][change_exp_basis]["percent_zero_interactions"]
 
             neut,percent_neut = measure_redundancy(treatment*"/"*rep*"/"*experiment*"_landscape_interactions.csv")
             results[rep][experiment]["neut_interactions"] = neut
             results[rep][experiment]["essential_interactions"] = p+n-neut
             results[rep][experiment]["percent_essential_interactions"] = (p+n-neut)/(p+n)
             results[rep][experiment]["percent_neut_interactions"] = percent_neut
-            results[rep][experiment]["change_neut_interactions"] = neut-results[rep]["hybrid_ancestor"]["neut_interactions"]
-            results[rep][experiment]["change_percent_neut_interactions"] = percent_neut-results[rep]["hybrid_ancestor"]["percent_neut_interactions"]
-            results[rep][experiment]["change_essential_interactions"] = p+n-neut-results[rep]["hybrid_ancestor"]["essential_interactions"]
-            results[rep][experiment]["change_percent_essential_interactions"] = ((p+n-neut)/(p+n))-results[rep]["hybrid_ancestor"]["percent_essential_interactions"]
+            results[rep][experiment]["change_neut_interactions"] = neut-results[rep][change_exp_basis]["neut_interactions"]
+            results[rep][experiment]["change_percent_neut_interactions"] = percent_neut-results[rep][change_exp_basis]["percent_neut_interactions"]
+            results[rep][experiment]["change_essential_interactions"] = p+n-neut-results[rep][change_exp_basis]["essential_interactions"]
+            results[rep][experiment]["change_percent_essential_interactions"] = ((p+n-neut)/(p+n))-results[rep][change_exp_basis]["percent_essential_interactions"]
 
             gneut,percent_gneut = measure_redundancy(treatment*"/"*rep*"/"*experiment*"_landscape_genes.csv")
             results[rep][experiment]["neut_genes"] = gneut
             results[rep][experiment]["percent_neut_genes"] = percent_gneut
-            results[rep][experiment]["change_neut_genes"] = gneut-results[rep]["hybrid_ancestor"]["neut_genes"]
-            results[rep][experiment]["change_percent_neut_genes"] = percent_gneut-results[rep]["hybrid_ancestor"]["percent_neut_genes"]
+            results[rep][experiment]["change_neut_genes"] = gneut-results[rep][change_exp_basis]["neut_genes"]
+            results[rep][experiment]["change_percent_neut_genes"] = percent_gneut-results[rep][change_exp_basis]["percent_neut_genes"]
 
             if experiment in ["ancestor_1","ancestor_2","reduced_ancestor_1","reduced_ancestor_2"]
                 results[rep][experiment]["funcpleio_genes"] = -1
@@ -119,9 +124,6 @@ function main()
                 results[rep][experiment]["change_anc_essential_interactions"] = -1
 
                 results[rep][experiment]["module_interaction_fitness"] = -1
-
-                #results[rep][experiment]["min_complexity"] = -1
-                #results[rep][experiment]["percent_complexity"] = -1
             else
                 num_genes = convert(Int64,length(grn[1,:])/2)
                 trait_1_genes = collect(1:1:num_genes)
@@ -130,14 +132,14 @@ function main()
                 gpleio,percent_gpleio = measure_functional_pleiotropy(treatment*"/"*rep*"/"*experiment*"_landscape_genes.csv",trait_1_genes,trait_2_genes)
                 results[rep][experiment]["funcpleio_genes"] = gpleio
                 results[rep][experiment]["percent_funcpleio_genes"] = percent_gpleio
-                results[rep][experiment]["change_funcpleio_genes"] = gpleio-results[rep]["hybrid_ancestor"]["funcpleio_genes"]
-                results[rep][experiment]["change_percent_funcpleio_genes"] = percent_gpleio-results[rep]["hybrid_ancestor"]["percent_funcpleio_genes"]
+                results[rep][experiment]["change_funcpleio_genes"] = gpleio-results[rep][change_exp_basis]["funcpleio_genes"]
+                results[rep][experiment]["change_percent_funcpleio_genes"] = percent_gpleio-results[rep][change_exp_basis]["percent_funcpleio_genes"]
 
                 pleio,percent_pleio = measure_functional_pleiotropy(treatment*"/"*rep*"/"*experiment*"_landscape_interactions.csv",trait_1_genes,trait_2_genes)
                 results[rep][experiment]["funcpleio_interactions"] = pleio
                 results[rep][experiment]["percent_funcpleio_interactions"] = percent_pleio
-                results[rep][experiment]["change_funcpleio_interactions"] = pleio-results[rep]["hybrid_ancestor"]["funcpleio_interactions"]
-                results[rep][experiment]["change_percent_funcpleio_interactions"] = percent_pleio-results[rep]["hybrid_ancestor"]["percent_funcpleio_interactions"]
+                results[rep][experiment]["change_funcpleio_interactions"] = pleio-results[rep][change_exp_basis]["funcpleio_interactions"]
+                results[rep][experiment]["change_percent_funcpleio_interactions"] = percent_pleio-results[rep][change_exp_basis]["percent_funcpleio_interactions"]
 
                 panc,nanc,palt,nalt = measure_trait_connectivity(grn,trait_1_genes,trait_2_genes)
                 @assert panc+nanc+palt+nalt == results[rep][experiment]["total_interactions"]
@@ -147,29 +149,25 @@ function main()
                 results[rep][experiment]["anc_pos_interactions"] = panc
                 results[rep][experiment]["anc_total_interactions"] = panc + nanc
                 results[rep][experiment]["alt_total_interactions"] = palt + nalt
-                results[rep][experiment]["change_alt_pos_interactions"] = palt-results[rep]["hybrid_ancestor"]["alt_pos_interactions"]
-                results[rep][experiment]["change_alt_neg_interactions"] = nalt-results[rep]["hybrid_ancestor"]["alt_neg_interactions"]
-                results[rep][experiment]["change_anc_neg_interactions"] = nanc-results[rep]["hybrid_ancestor"]["anc_neg_interactions"]
-                results[rep][experiment]["change_anc_pos_interactions"] = panc-results[rep]["hybrid_ancestor"]["anc_pos_interactions"]
-                results[rep][experiment]["change_alt_total_interactions"] = palt+nalt-results[rep]["hybrid_ancestor"]["alt_total_interactions"]
-                results[rep][experiment]["change_anc_total_interactions"] = panc+nanc-results[rep]["hybrid_ancestor"]["anc_total_interactions"]
+                results[rep][experiment]["change_alt_pos_interactions"] = palt-results[rep][change_exp_basis]["alt_pos_interactions"]
+                results[rep][experiment]["change_alt_neg_interactions"] = nalt-results[rep][change_exp_basis]["alt_neg_interactions"]
+                results[rep][experiment]["change_anc_neg_interactions"] = nanc-results[rep][change_exp_basis]["anc_neg_interactions"]
+                results[rep][experiment]["change_anc_pos_interactions"] = panc-results[rep][change_exp_basis]["anc_pos_interactions"]
+                results[rep][experiment]["change_alt_total_interactions"] = palt+nalt-results[rep][change_exp_basis]["alt_total_interactions"]
+                results[rep][experiment]["change_anc_total_interactions"] = panc+nanc-results[rep][change_exp_basis]["anc_total_interactions"]
 
                 anc_neut,p_anc_neut,alt_neut,p_alt_neut = measure_redundancy(treatment*"/"*rep*"/"*experiment*"_landscape_interactions.csv",trait_1_genes,trait_2_genes)
                 @assert anc_neut+alt_neut == results[rep][experiment]["neut_interactions"]
                 results[rep][experiment]["alt_neut_interactions"] = alt_neut
                 results[rep][experiment]["anc_neut_interactions"] = anc_neut
-                results[rep][experiment]["change_alt_neut_interactions"] = alt_neut - results[rep]["hybrid_ancestor"]["alt_neut_interactions"]
-                results[rep][experiment]["change_anc_neut_interactions"] = anc_neut - results[rep]["hybrid_ancestor"]["anc_neut_interactions"]
+                results[rep][experiment]["change_alt_neut_interactions"] = alt_neut - results[rep][change_exp_basis]["alt_neut_interactions"]
+                results[rep][experiment]["change_anc_neut_interactions"] = anc_neut - results[rep][change_exp_basis]["anc_neut_interactions"]
                 results[rep][experiment]["alt_essential_interactions"] = results[rep][experiment]["alt_total_interactions"] - results[rep][experiment]["alt_neut_interactions"]
                 results[rep][experiment]["anc_essential_interactions"] = results[rep][experiment]["anc_total_interactions"] - results[rep][experiment]["anc_neut_interactions"]
-                results[rep][experiment]["change_alt_essential_interactions"] = results[rep][experiment]["alt_essential_interactions"] - results[rep]["hybrid_ancestor"]["alt_essential_interactions"]
-                results[rep][experiment]["change_anc_essential_interactions"] = results[rep][experiment]["anc_essential_interactions"] - results[rep]["hybrid_ancestor"]["anc_essential_interactions"]
+                results[rep][experiment]["change_alt_essential_interactions"] = results[rep][experiment]["alt_essential_interactions"] - results[rep][change_exp_basis]["alt_essential_interactions"]
+                results[rep][experiment]["change_anc_essential_interactions"] = results[rep][experiment]["anc_essential_interactions"] - results[rep][change_exp_basis]["anc_essential_interactions"]
 
                 results[rep][experiment]["module_interaction_fitness"] = measure_module_interaction(S_0,grn,trait_1_genes,trait_2_genes)
-
-                #min,min_percent = measure_network_complexity(S_0,grn,30)
-                #results[rep][experiment]["min_complexity"] = min
-                #results[rep][experiment]["percent_complexity"] = min_percent
             end
         end
     end

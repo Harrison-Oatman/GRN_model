@@ -10,7 +10,13 @@ filenames = ["Genes10_Mu110/results.csv","Genes20_Mu110/results.csv",
              "Genes30_Mu110/results.csv","Genes40_Mu110/results.csv",
              "Genes50_Mu110/results.csv","Genes60_Mu110/results.csv",
              "Genes70_Mu110/results.csv","Genes80_Mu110/results.csv",
-             "Genes90_Mu110/results.csv","Genes100_Mu110/results.csv"]
+             "Genes90_Mu110/results.csv","Genes100_Mu110/results.csv",
+             "Control_Genes10_Mu110/results.csv",
+             "Control_Genes30_Mu110/results.csv",
+             "Control_Genes50_Mu110/results.csv",
+             "ControlSep_Genes10_Mu110/results.csv",
+             "ControlSep_Genes30_Mu110/results.csv",
+             "ControlSep_Genes50_Mu110/results.csv"]
              """
              "Genes10_Mu1100/results.csv","Genes20_Mu1100/results.csv",
              "Genes30_Mu1100/results.csv","Genes40_Mu1100/results.csv",
