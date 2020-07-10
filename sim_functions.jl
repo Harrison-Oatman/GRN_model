@@ -67,7 +67,6 @@ function create_ancestor(params::Dict{String,Any},dir)
         ancestor_grn_stability, ancestor_S_final = assess_stability(ancestor_grn,S_0)
         trial_ct += 1
     end
-    print("ancestor GRN:", ancestor_grn)
     save(dir,"num_ancestor_trials","Ancestor_Trials",trial_ct)
     return S_0,ancestor_grn,ancestor_S_final
 end
@@ -712,14 +711,14 @@ function adaptive_walk(ancestor_genotype::Genotype,mu_values::Dict{String,Float6
         ct += 1
         if mutant_found
             if mutant_S_final_list[end] == S_opt[end]
-                println("optimal state reached in", ct)
+                println("optimal state reached in ", ct)
                 ct = walk_length
             end
         end
     end
     println("mutations accepted: ", length(mutant_S_final_list))
     save(dir,filename,S_0,genotype.grn,mutant_S_final_list,genotype.fixed_mutations)
-    save(dir*"/"*filename*"_stats","mutation")
+    save(dir,filename*"_num_mutations","none",length(mutant_S_final_list))
     return genotype,evolved_S_final
 end
 
@@ -838,7 +837,7 @@ function run_sim(params::Dict{String,Any})
     save(dir,"ancestor_2",S_0_2,ancestor_grn_2,ancestor_S_final_2)
 
 
-    println("ancestors found")
+
     #Reduce ancestor GRNs to number of interactions established by
     #mutation-selection balance
     genotype_1 = Genotype(ancestor_grn_1,Mutation[])
