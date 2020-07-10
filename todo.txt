@@ -1,0 +1,24 @@
+new config vars:
+- evolution type ("adaptive, neutral")
+- S_0 weights [0,1]
+  - probability that S_0[i] = 1
+- GRN positive bias [0,1]
+  - probability that nonzero A[i,j] = 1
+- Selection Method ("anneal," "positive")
+
+
+
+sim_functions:
+- create ancestor
+  - add weights to S_0 generation
+  generate_random_grn
+    - add weights to grn generation
+
+- neutral_walk:
+  - add break to walk if equilibrium reached
+
+- adaptive_walk (copy of neutral_walk)
+
+- run_sim:
+  - add condition for adaptive evolution
+    - adaptive_walk
