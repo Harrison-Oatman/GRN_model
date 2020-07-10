@@ -39,7 +39,7 @@ function user_input!(param::ConfParse)
     end
 end
 
-function create_ancestor(params::Dict{String,Any})
+function create_ancestor(params::Dict{String,Any},dir)
     """
     Goal: Create a genotype by randomly generating an array of initial gene
     states, then repeatedly generate random grns, until discovers a grn and
@@ -67,12 +67,12 @@ function create_ancestor(params::Dict{String,Any})
         ancestor_grn_stability, ancestor_S_final = assess_stability(ancestor_grn,S_0)
         trial_ct += 1
     end
-    save(params["treatment"]*"/replicate_"*string(params["random_seed"]),
-         "num_ancestor_trials","Ancestor_Trials",trial_ct)
+    print("ancestor GRN:", ancestor_grn)
+    save(dir,"num_ancestor_trials","Ancestor_Trials",trial_ct)
     return S_0,ancestor_grn,ancestor_S_final
 end
 
-function create_sep_ancestors(params::Dict{String,Any})
+function create_sep_ancestors(params::Dict{String,Any},dir)
     """
     Goal: Create a genotype by randomly generating an array of initial gene
     states, then repeatedly generate random grns, until discovers a grn and
@@ -106,8 +106,7 @@ function create_sep_ancestors(params::Dict{String,Any})
         ancestor_grn_stability_2, ancestor_S_final_2 = assess_stability(ancestor_grn,S_0_2)
         trial_ct += 1
     end
-    save(params["treatment"]*"/replicate_"*string(params["random_seed"]),
-         "num_ancestor_trials","Ancestor_Trials",trial_ct)
+    save(dir,"num_ancestor_trials","Ancestor_Trials",trial_ct)
     return [S_0_1,S_0_2],ancestor_grn,[ancestor_S_final_1,ancestor_S_final_2]
 end
 
@@ -341,7 +340,9 @@ function save(dir::String,filename::String,stat_name::String,stat_value::Int64)
     """
 
     f = open(dir*"/"*filename*".dat","w")
-    write(f,stat_name*"\n")
+    if stat_name != "none"
+        write(f,stat_name*"\n")
+    end
     write(f,string(stat_value))
     close(f)
 end
@@ -410,7 +411,6 @@ function generate_random_grn(params::Dict{String,Any})
     end
     return ancestor_grn
 end
-
 
 function dist(S1::Array{Float64,1},S2::Array{Float64,1})
     """
@@ -526,7 +526,6 @@ function rand_mutate_grn(grn::Array{Float64,2},mutation_type::String,
     end
     @assert grn[row,col] != new_grn[row,col]
     return new_grn,random_entry,grn[row,col],new_grn[row,col]
-
 end
 
 function neutral_evolve(genotype::Genotype,
@@ -614,10 +613,11 @@ function hybridize_networks(S_0_1::Array{Float64,1},grn_1::Array{Float64,2},
     new_S_final = vcat(S_final_1,S_final_2)
 
     dim = length(grn_1[1,:])
-    zero_matrix = zeros(dim,dim)
+    zero_matrix12 = zeros(dim,dim)
+    zero_matrix21 = zeros(dim,dim)
 
-    grn_1_extended = vcat(grn_1,zero_matrix)
-    grn_2_extended = vcat(zero_matrix,grn_2)
+    grn_1_extended = vcat(grn_1,zero_matrix12)
+    grn_2_extended = vcat(zero_matrix21,grn_2)
     new_grn = hcat(grn_1_extended,grn_2_extended)
 
     return new_S_0,new_grn,new_S_final
@@ -666,6 +666,145 @@ function neutral_walk(ancestor_genotype::Genotype,mu_values::Dict{String,Float64
     return genotype,evolved_S_final
 end
 
+function adaptive_walk(ancestor_genotype::Genotype,mu_values::Dict{String,Float64},
+                      S_0::Array{Array{Float64,1},1},
+                      S_opt::Array{Array{Float64,1},1},
+                      S_final::Array{Array{Float64,1},1},
+                      int_type::String,
+                      dir::String,filename::String,walk_length::Int64,
+                      selection_method::String, sigma::Float64)
+    """
+    Purpose: Performs a neutral walk for a given genotype. A neutral walk is
+    the sequential fixation of a series of neutral mutations. (In the same way
+    that an adaptive walk is the sequential fixation of a series of adaptive
+    mutations.)
+
+    Inputs:
+        1) ancestor_genotype: Ancestral genotype
+        2) mu_values: dictionary of mutation values
+        3) S_0: array of gene starting states
+        4) S_opt: array of optimal gene final states
+        5) int_type: Type of interactions (normal or boolean)
+        6) dir: location to store results
+        7) filename: name of experiment
+        8) walk_length: Amount of mutations to attempt in adaptive walk
+        9) selection_method: method used to determine if stable mutation is accepted
+        10) sigma: constant used to calculate fitness
+
+    Outputs:
+        1) Evolved genotype
+        2) Evolved S_final(s)
+    """
+
+    genotype = deepcopy(ancestor_genotype)
+    evolved_S_final = []
+
+    ct = 0
+    # interaction_values = Array{Int64,1}()
+    mutant_S_final_list = Array{Array{Float64,1},1}()
+    push!(mutant_S_final_list,S_final[1])
+    while ct < walk_length
+        genotype,mutant_S_final_list, mutant_found = adaptive_evolve(genotype,mu_values,S_0,S_opt,
+                                                  int_type,selection_method, sigma,
+                                                  mutant_S_final_list)
+        # p,n,z = measure_connectivity(genotype.grn)
+        # push!(interaction_values,p+n)
+        ct += 1
+        if mutant_found
+            if mutant_S_final_list[end] == S_opt[end]
+                println("optimal state reached in", ct)
+                ct = walk_length
+            end
+        end
+    end
+    println("mutations accepted: ", length(mutant_S_final_list))
+    save(dir,filename,S_0,genotype.grn,mutant_S_final_list,genotype.fixed_mutations)
+    save(dir*"/"*filename*"_stats","mutation")
+    return genotype,evolved_S_final
+end
+
+function adaptive_evolve(genotype::Genotype,
+                        mu_values::Dict{String,Float64},
+                        S_0::Array{Array{Float64,1},1},
+                        S_opt::Array{Array{Float64,1},1},
+                        int_type::String,
+                        selection_method::String,
+                        sigma::Float64,
+                        S_final_list::Array{Array{Float64,1},1})
+
+    """
+    Goal: This function creates a mutation, and applies the chosen selection
+    method to determine if the mutation fixes
+
+    Inputs:
+        1. genotype: the genotype (gene regualtory network) to mutate
+        2. mu_values: the raw mutational values that determine the rates at
+        which gain-, change-, and loss-of-function mutations occur (these are
+        then adjusted for the number of interactions in the network and their
+        relative rates to each other)
+        3. S_0: array of vectors of initial gene states
+        4. S_opt: array of vectors of gene states with greatest fitness
+        5. int_type: type of interactions (binary, uniform, etc...)
+
+    Outputs:
+        1. Genotype with mutated gene regulatory network matrix and appended
+        mutation list
+        2. array of final gene states vector
+    """
+
+    p,n,z = measure_connectivity(genotype.grn)
+
+    actual_mu_values = [mu_values["loss"]*(p+n),
+                        mu_values["change"]*(p+n),
+                        mu_values["gain"]*z]
+
+    relative_mu_values = [actual_mu_values[i]/sum(actual_mu_values) for i=1:3]
+    mutant_type = sample(["loss","change","gain"],Weights(relative_mu_values))
+
+    mutant_grn,loc,anc_val,mut_val = rand_mutate_grn(genotype.grn,mutant_type,int_type)
+
+    mutant_found = true
+    new_S_final_list = deepcopy(S_final_list)
+    stability = true
+    mutant_S_final = []
+    # evaluate mutated GRN for each S_0
+    for i=1:length(S_0)
+        stability,mutant_S_final = assess_stability(mutant_grn,S_0[i])
+        if stability == false
+            mutant_found = false
+            break
+        end
+    end
+    # using the new final state, select based on selection method
+    if mutant_found
+        old_fitness = 0
+        fitness = 0
+        for i in 1:length(S_0)
+            old_fitness += calc_fitness(sigma, true, S_opt[i], S_final_list[end])
+            fitness += calc_fitness(sigma, true, S_opt[i], mutant_S_final)
+        end
+        # separate by selection method
+        if selection_method == "absolute"
+            mutant_found = absolute_selection(fitness, old_fitness)
+        end
+    end
+    # if mutant accepted, update s_final list, and update genotype, then return
+    if mutant_found
+        #println(mutant_S_final_list)
+        push!(new_S_final_list, mutant_S_final)
+        new_mut = Mutation(loc,anc_val,mut_val)
+        new_mut_list = deepcopy((genotype.fixed_mutations))
+        push!(new_mut_list,new_mut)
+        return Genotype(mutant_grn,new_mut_list),new_S_final_list, true
+    end
+
+    return genotype,new_S_final_list, false
+end
+
+function absolute_selection(fitness, old_fitness)
+    return fitness > old_fitness
+end
+
 function run_sim(params::Dict{String,Any})
     """
     Purpose: This function runs 1 replicate of this simulation for the following
@@ -674,12 +813,14 @@ function run_sim(params::Dict{String,Any})
     Inputs: A dictionary containing all experiments parameters from the sim.cfg
     file
 
-    Outputs: Saves all in the folder 'treatment/replicate_{i},' where i is the
+    Outputs: Saves all in the folder 'parent_folder/treatment/replicate_{i},' where i is the
     replicate number set by the random seed
     """
 
     #Create treatment and replicate folder if necessary
-    dir = params["treatment"]*"/replicate_"*string(params["random_seed"])
+    dir = params["parent_folder"]* "/" * params["treatment"]*"/replicate_"*
+          string(params["random_seed"])
+
     if isdir(dir) == false
         mkpath(dir)
     end
@@ -691,11 +832,13 @@ function run_sim(params::Dict{String,Any})
                      "loss" => params["mu_loss"])
 
     #create two ancestor gene regulatory networks (GRNs)
-    S_0_1, ancestor_grn_1, ancestor_S_final_1 = create_ancestor(params)
+    S_0_1, ancestor_grn_1, ancestor_S_final_1 = create_ancestor(params,dir)
     save(dir,"ancestor_1",S_0_1,ancestor_grn_1,ancestor_S_final_1)
-    S_0_2, ancestor_grn_2, ancestor_S_final_2 = create_ancestor(params)
+    S_0_2, ancestor_grn_2, ancestor_S_final_2 = create_ancestor(params,dir)
     save(dir,"ancestor_2",S_0_2,ancestor_grn_2,ancestor_S_final_2)
 
+
+    println("ancestors found")
     #Reduce ancestor GRNs to number of interactions established by
     #mutation-selection balance
     genotype_1 = Genotype(ancestor_grn_1,Mutation[])
@@ -705,7 +848,8 @@ function run_sim(params::Dict{String,Any})
                                                          [ancestor_S_final_1],
                                                          params["interaction_type"],
                                                          dir,"reduced_ancestor_1",
-                                                         params["neutral_walk_length"])
+                                                         params["walk_length"])
+    println("neutral walk complete")
     genotype_2 = Genotype(ancestor_grn_2,Mutation[])
     genotype_2_evolved_S_final = []
     genotype_2,genotype_2_evolved_S_final = neutral_walk(genotype_2, mu_values,
@@ -713,8 +857,8 @@ function run_sim(params::Dict{String,Any})
                                                          [ancestor_S_final_2],
                                                          params["interaction_type"],
                                                          dir,"reduced_ancestor_2",
-                                                         params["neutral_walk_length"])
-
+                                                         params["walk_length"])
+    println("neutral walk complete")
     #Hybridize both reduced networks together
     hybrid_S_0,hybrid_grn,hybrid_S_final = hybridize_networks(S_0_1,
                                                               genotype_1.grn,
@@ -738,32 +882,58 @@ function run_sim(params::Dict{String,Any})
     alt_stability_2,alt_S_final_2 = assess_stability(hybrid_grn,alt_S_0_2)
     @assert alt_stability_2 == true
 
-    #Neutrally evolve hybrid genotype when a mutation has to be neutral both
-    #when signal 1 (i.e., S_0_1) is on and signal 2 (i.e., S_0_2) is off and
-    #when the opposite is true. This scenario could be imagined as each signal
-    #represents a separate envionmental condition.
-    genotype_sep_evo = Genotype(hybrid_grn,Mutation[])
-    genotype_sep_evo_S_final = []
-    genotype_sep_evo, genotype_sep_evo_S_final = neutral_walk(genotype_sep_evo,
-                                                              mu_values,
-                                                              [alt_S_0_1,alt_S_0_2],
-                                                              [alt_S_final_1,alt_S_final_2],
-                                                              params["interaction_type"],
-                                                              dir,"neutral_separate_evolved",
-                                                              params["neutral_walk_length"])
-     #Neutrally evolve hybrid genotype when a mutation has to be neutral when
-     #both signal 1 (i.e., S_0_1) and signal 2 (i.e., S_0_2) is on at the same
-     #time. This scenario can be thought of as two GRNs being activated in the
-     #same environment when they used to be activated in different environments.
-     genotype_neut_evo = Genotype(hybrid_grn,Mutation[])
-     genotype_neut_evo_S_final = []
-     genotype_neut_evo, genotype_neut_evo_S_final = neutral_walk(genotype_neut_evo,
-                                                                 mu_values,
-                                                                 [hybrid_S_0],
-                                                                 [hybrid_S_final],
-                                                                 params["interaction_type"],
-                                                                 dir,"neutral_combined_evolved",
-                                                                 params["neutral_walk_length"])
+    if params["experiment_type"] == "adaptive"
+        # Adaptively evolve hybrid genotype, where the optimal phenotype is
+        # the combined
+        if params["reverse_signal"]
+            S_0 = [alt_S_0_1, alt_S_0_2]
+            S_final = [alt_S_final_1, alt_S_final_2]
+        else
+            S_0 = [alt_S_0_1]
+            S_final = [alt_S_final_1]
+        end
+
+        genotype_adaptive = Genotype(hybrid_grn,Mutation[])
+        geontype_adaptive, genotype_adaptive_S_final = adaptive_walk(genotype_adaptive,
+                                                                    mu_values,
+                                                                    S_0,
+                                                                    [hybrid_S_final],
+                                                                    S_final,
+                                                                    params["interaction_type"],
+                                                                    dir, "adaptive_combined_evolved",
+                                                                    params["walk_length"],
+                                                                    params["selection_method"],
+                                                                    params["sigma"])
+    end
+
+    if params["experiment_type"] == "neutral"
+        #Neutrally evolve hybrid genotype when a mutation has to be neutral both
+        #when signal 1 (i.e., S_0_1) is on and signal 2 (i.e., S_0_2) is off and
+        #when the opposite is true. This scenario could be imagined as each signal
+        #represents a separate envionmental condition.
+        genotype_sep_evo = Genotype(hybrid_grn,Mutation[])
+        genotype_sep_evo_S_final = []
+        genotype_sep_evo, genotype_sep_evo_S_final = neutral_walk(genotype_sep_evo,
+                                                                  mu_values,
+                                                                  [alt_S_0_1,alt_S_0_2],
+                                                                  [alt_S_final_1,alt_S_final_2],
+                                                                  params["interaction_type"],
+                                                                  dir,"neutral_separate_evolved",
+                                                                  params["walk_length"])
+        #Neutrally evolve hybrid genotype when a mutation has to be neutral when
+        #both signal 1 (i.e., S_0_1) and signal 2 (i.e., S_0_2) is on at the same
+        #time. This scenario can be thought of as two GRNs being activated in the
+        #same environment when they used to be activated in different environments.
+        genotype_neut_evo = Genotype(hybrid_grn,Mutation[])
+        genotype_neut_evo_S_final = []
+        genotype_neut_evo, genotype_neut_evo_S_final = neutral_walk(genotype_neut_evo,
+                                                                     mu_values,
+                                                                     [hybrid_S_0],
+                                                                     [hybrid_S_final],
+                                                                     params["interaction_type"],
+                                                                     dir,"neutral_combined_evolved",
+                                                                     params["walk_length"])
+    end
 end
 
 function measure_connectivity(grn::Array{Float64,2})

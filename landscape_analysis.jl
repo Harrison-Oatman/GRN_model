@@ -23,8 +23,7 @@ function main()
 
         experiment_list = ["hybrid_ancestor","ancestor_1","ancestor_2",
                            "reduced_ancestor_1","reduced_ancestor_2",
-                           "neutral_separate_evolved",
-                           "neutral_combined_evolved"]
+                           "adaptive_combined_evolved"]
         if occursin("Control",treatment)
             experiment_list = ["ancestor","evolved"]
         end
