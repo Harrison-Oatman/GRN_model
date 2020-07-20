@@ -13,6 +13,9 @@ struct Mutation
     location::Int64
     ancestral_value::Float64
     new_value::Float64
+    fitness_diff::Float64
+    incoming_interactions::Int64
+    outgoing_interactions::Int64
 end
 
 struct Genotype
@@ -179,11 +182,14 @@ function save(dir::String,filename::String,S_0::Array{Float64,1},
 
       save(dir,filename,S_0,grn,S_final)
 
-      f = open(dir*"/"*filename*"_Fixed_Mutations.dat","w")
+      f = open(dir*"/"*filename*"_fixed_mutations.dat","w")
       for j=1:length(fixed_mutations)
           write(f,string(fixed_mutations[j].location)*",")
           write(f,string(fixed_mutations[j].ancestral_value)*",")
-          write(f,string(fixed_mutations[j].new_value)*"\n")
+          write(f,string(fixed_mutations[j].new_value)*",")
+          write(f,string(fixed_mutations[j].fitness_diff)*",")
+          write(f,string(fixed_mutations[j].incoming_interactions)*",")
+          write(f,string(fixed_mutations[j].outgoing_interactions)*"\n")
       end
       close(f)
 end
@@ -259,7 +265,10 @@ function save(dir::String,filename::String,S_0::Array{Array{Float64,1}},
           end
           write(f,string(fixed_mutations[j].location)*",")
           write(f,string(fixed_mutations[j].ancestral_value)*",")
-          write(f,string(fixed_mutations[j].new_value))
+          write(f,string(fixed_mutations[j].new_value)*",")
+          write(f,string(fixed_mutations[j].fitness_diff)*",")
+          write(f,string(fixed_mutations[j].incoming_interactions)*",")
+          write(f,string(fixed_mutations[j].outgoing_interactions))
       end
       close(f)
 end
@@ -325,7 +334,7 @@ function save(dir::String,filename::String,S_0::Array{Array{Float64,1}},
       close(f)
 end
 
-function save(dir::String,filename::String,stat_name::String,stat_value::Int64)
+function save(dir::String,filename::String,stat_name::String,stat_value)
     """
     Goal: Another save function that saves a given stat and its value to a file.
     This was developed to save how many random GRNs were generated for ancestor
@@ -499,8 +508,8 @@ function rand_mutate_grn(grn::Array{Float64,2},mutation_type::String,
     while mutant_found == false
         random_entry = rand(1:network_dim^2)
         #println(random_entry)
-        row = rem((random_entry-1),network_dim)+1
-        col = div((random_entry-1),network_dim)+1
+        row = div((random_entry-1),network_dim)+1
+        col = rem((random_entry-1),network_dim)+1
         #println(row,col)
         if mutation_type == "loss" && grn[row,col] != 0.0
             new_grn[row,col] = 0.0
@@ -553,6 +562,7 @@ function neutral_evolve(genotype::Genotype,
         2. array of final gene states vector
     """
 
+    size = length(S_0[1])
     p,n,z = measure_connectivity(genotype.grn)
 
     actual_mu_values = [mu_values["loss"]*(p+n),
@@ -577,7 +587,14 @@ function neutral_evolve(genotype::Genotype,
         end
         if mutant_found == true
             #println(mutant_S_final_list)
-            new_mut = Mutation(loc,anc_val,mut_val)
+
+            row = div((loc-1),size)+1
+            col = rem((loc-1),size)+1
+
+            incoming_interacts = sum([abs(x) for x in mutant_grn[row,:]])
+            outgoing_interacts = sum([abs(x) for x in mutant_grn[:,col]])
+
+            new_mut = Mutation(loc,anc_val,mut_val,0,incoming_interacts,outgoing_interacts)
             new_mut_list = deepcopy((genotype.fixed_mutations))
             push!(new_mut_list,new_mut)
             return Genotype(mutant_grn,new_mut_list),mutant_S_final_list
@@ -694,6 +711,9 @@ function adaptive_walk(ancestor_genotype::Genotype,mu_values::Dict{String,Float6
         1) Evolved genotype
         2) Evolved S_final(s)
     """
+    size = length(S_0[1])
+    _, __, t = assess_stability(ancestor_genotype.grn,S_0[1])
+    save(dir,"hybrid_ancestor_convergence_time","none",t)
 
     genotype = deepcopy(ancestor_genotype)
     evolved_S_final = []
@@ -712,13 +732,26 @@ function adaptive_walk(ancestor_genotype::Genotype,mu_values::Dict{String,Float6
         if mutant_found
             if mutant_S_final_list[end] == S_opt[end]
                 println("optimal state reached in ", ct)
+                save(dir,filename*"_steps","none",ct)
                 ct = walk_length
             end
         end
     end
-    println("mutations accepted: ", length(mutant_S_final_list))
+    println("mutations accepted: ", length(mutant_S_final_list)-1)
     save(dir,filename,S_0,genotype.grn,mutant_S_final_list,genotype.fixed_mutations)
-    save(dir,filename*"_num_mutations","none",length(mutant_S_final_list))
+    save(dir,filename*"_num_mutations","none",length(mutant_S_final_list)-1)
+
+    _, __, t = assess_stability(genotype.grn,S_0[1])
+    save(dir,filename* "_convergence_time","none",t)
+
+    avg_connectivity = sum([abs(x) for x in genotype.grn])/size
+    save(dir,filename* "_avg_connectivity","none",avg_connectivity)
+
+    if mutant_S_final_list[end] != S_opt[end]
+        println("optimal state NOT REACHED")
+        save(dir,filename*"_steps","none",walk_length)
+        ct = walk_length
+    end
     return genotype,evolved_S_final
 end
 
@@ -766,6 +799,7 @@ function adaptive_evolve(genotype::Genotype,
     new_S_final_list = deepcopy(S_final_list)
     stability = true
     mutant_S_final = []
+    size = length(S_0[1])
     # evaluate mutated GRN for each S_0
     for i=1:length(S_0)
         stability,mutant_S_final = assess_stability(mutant_grn,S_0[i])
@@ -775,12 +809,14 @@ function adaptive_evolve(genotype::Genotype,
         end
     end
     # using the new final state, select based on selection method
+    fitness_diff = 1
     if mutant_found
         old_fitness = 0
         fitness = 0
         for i in 1:length(S_0)
             old_fitness += calc_fitness(sigma, true, S_opt[i], S_final_list[end])
             fitness += calc_fitness(sigma, true, S_opt[i], mutant_S_final)
+            fitness_diff = fitness/old_fitness
         end
         # separate by selection method
         if selection_method == "absolute"
@@ -791,12 +827,18 @@ function adaptive_evolve(genotype::Genotype,
     if mutant_found
         #println(mutant_S_final_list)
         push!(new_S_final_list, mutant_S_final)
-        new_mut = Mutation(loc,anc_val,mut_val)
+
+        row = div((loc-1),size)+1
+        col = rem((loc-1),size)+1
+
+        incoming_interacts = sum([abs(x) for x in mutant_grn[row,:]])
+        outgoing_interacts = sum([abs(x) for x in mutant_grn[:,col]])
+
+        new_mut = Mutation(loc,anc_val,mut_val,fitness_diff,incoming_interacts,outgoing_interacts)
         new_mut_list = deepcopy((genotype.fixed_mutations))
         push!(new_mut_list,new_mut)
         return Genotype(mutant_grn,new_mut_list),new_S_final_list, true
     end
-
     return genotype,new_S_final_list, false
 end
 
@@ -823,6 +865,7 @@ function run_sim(params::Dict{String,Any})
     if isdir(dir) == false
         mkpath(dir)
     end
+
 
     #Some setup
     Random.seed!(params["random_seed"])
