@@ -69,7 +69,7 @@ function get_mutation_lists(parent_folder::String,treatment_list,filename::Strin
     return results
 end
 
-function produce_plots(series::Array{Array{Any,1},1},x_values::Array{Int64,1},log::Bool,title::String)
+function produce_plots(series,x_values::Array{Int64,1},log::Bool,title::String)
     gr()
     println("here")
     mean_list = Array{Float64,1}()
@@ -148,7 +148,7 @@ function series_from_mutators(mutation_list,size_list)
     return quadrants,incoming,outgoing,fitness_difference
 end
 
-function produce_plots(series_list::Array{Array{Array{Any,1},1}},x_values::Array{Int64,1},
+function produce_plots(series_list::Array{Array{Array{Float64,1},1}},x_values::Array{Int64,1},
                         log::Bool,title::String, label_list::Array{String,1})
     gr()
     println("here")
@@ -182,9 +182,9 @@ end
 
 function main()
     parent_folder = "results"
-    treatment_list = ["Size10","Size30","Size50"]
+    treatment_list = ["Size10","Size30","Size50","Size70","Size90","Size110"]
 
-    x_values = [10,30,50]
+    x_values = [10,30,50,70,90,110]
 
     num_mutations = assemble_series(parent_folder,treatment_list,"adaptive_combined_evolved_num_mutations")
 
@@ -206,7 +206,7 @@ function main()
     produce_plots([avg_final_connectivity,incoming,outgoing],x_values,false,
                     "Average connectivity",["All genes","Incoming mutators","Outgoing mutators"])
 
-    # produce_plots(quadrants,x_values,false,"Quadrants of mutations")
+    produce_plots(quadrants,x_values,false,"Quadrants of mutations")
 
     produce_plots(fitness_difference,x_values,false,"Fitness difference of mutations")
 
