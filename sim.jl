@@ -14,6 +14,8 @@ function main()
     This function only exists to eliminate global variables
     """
 
+    println("Starting")
+
     conf = ConfParse("sim.cfg")
     parse_conf!(conf)
 
