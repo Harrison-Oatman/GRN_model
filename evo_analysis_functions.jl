@@ -48,9 +48,11 @@ function assemble_series(parent_folder::String,treatment_list,filename::String)
         replicate_list = [dir for dir in readdir(treatment_dir) if occursin("replicate",dir)]
         for replicate in replicate_list
             file = treatment_dir * "/" * replicate * "/" * filename * ".dat"
-            open(file, "r") do f
-                value = parse(Float64,readline(f))
-                push!(stat_list,value)
+            if isfile(file)
+                open(file, "r") do f
+                    value = parse(Float64,readline(f))
+                    push!(stat_list,value)
+                end
             end
         end
         push!(results,stat_list)
@@ -72,17 +74,19 @@ function get_mutation_lists(parent_folder::String,treatment_list,filename::Strin
         for replicate in replicate_list
             mutation_list = Array{Mutation,1}()
             file = treatment_dir * "/" * replicate * "/" * filename * ".dat"
-            f = open(file, "r")
-            for ln in eachline(f)
-                lnarr = split(ln,",")
-                if lnarr != [""]
-                    mutation = Mutation(parse(Int64,lnarr[1]),parse(Float64,lnarr[2]),parse(Float64,lnarr[3]),
-                                        parse(Float64,lnarr[4]),parse(Int64,lnarr[5]),parse(Int64,lnarr[6]))
-                    push!(mutation_list,mutation)
+            if isfile(file)
+                f = open(file, "r")
+                for ln in eachline(f)
+                    lnarr = split(ln,",")
+                    if lnarr != [""]
+                        mutation = Mutation(parse(Int64,lnarr[1]),parse(Float64,lnarr[2]),parse(Float64,lnarr[3]),
+                                            parse(Float64,lnarr[4]),parse(Int64,lnarr[5]),parse(Int64,lnarr[6]))
+                        push!(mutation_list,mutation)
+                    end
                 end
+                close(f)
+                push!(stat_list,mutation_list)
             end
-            close(f)
-            push!(stat_list,mutation_list)
         end
         push!(results,stat_list)
     end
@@ -114,7 +118,7 @@ function produce_plots(series,x_values::Array{Int64,1},log::Bool,title::String)
         plot!(p,x,arr,seriestype = :scatter,label="")
     end
     plot!(p,x_values,mean_list,label="Mean")
-    display(p)
+    # display(p)
     savefig(p,"analysis/"*title*".pdf")
 end
 

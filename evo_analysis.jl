@@ -15,8 +15,8 @@ end
 function main()
     parent_folder = "results"
     # treatment_list = ["Size10","Size30","Size50","Size70","Size90","Size110"]
-    treatment_list = ["Size10"]
-    x_values = [10,30,50,70,90,110]
+    treatment_list = ["Size10","Size30","Size50","Size70","Size90","Size110","Size130","Size150"]
+    x_values = [10,30,50,70,90,110,130,150]
 
     num_mutations = assemble_series(parent_folder,treatment_list,"adaptive_combined_evolved_num_mutations")
 
