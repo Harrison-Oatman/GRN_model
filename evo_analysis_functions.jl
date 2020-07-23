@@ -245,6 +245,7 @@ function generate_partial_landscape(parent_folder::String,treatment_list)
                 save(path[1:end-1], "prop_neg", "none", stats[2]/tot)
                 save(path[1:end-1], "prop_neu", "none", stats[3]/tot)
                 save(path[1:end-1], "prop_complete", "none", stats[4]/tot)
+            end
         end
     end
 end
