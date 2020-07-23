@@ -370,5 +370,3 @@ function load(filename::String)
         throw(error("File does not exist"))
     end
 end
-
-m = generate_partial_landscape("results",["Size10"])
