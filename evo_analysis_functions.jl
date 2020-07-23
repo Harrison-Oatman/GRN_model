@@ -230,20 +230,21 @@ function generate_partial_landscape(parent_folder::String,treatment_list)
         replicate_list = [dir for dir in readdir(parent_folder*"/"*treatment) if occursin("replicate",dir)]
         for replicate in replicate_list
             path = parent_folder*"/"*treatment*"/"*replicate*"/"
-            print(path*"hybrid_ancestor_GRN.dat")
-            hybrid_GRN = load(path*"hybrid_ancestor_GRN.dat")
-            S_0 = load(path*"adaptive_combined_evolved_S_0.dat")[1]
-            S_opt = load(path*"hybrid_ancestor_S_final.dat")[1]
+            # print(path*"hybrid_ancestor_GRN.dat")
+            if isfile(path*"hybrid_ancestor_GRN.dat") && isfile(path*"adaptive_combined_evolved_S_0.dat") && isfile(path*"hybrid_ancestor_S_final.dat")
+                hybrid_GRN = load(path*"hybrid_ancestor_GRN.dat")
+                S_0 = load(path*"adaptive_combined_evolved_S_0.dat")[1]
+                S_opt = load(path*"hybrid_ancestor_S_final.dat")[1]
 
-            activation, rel_activation, stats, tot = partial_hypothetical_fitness(hybrid_GRN, S_0, S_opt, 1.0)
+                activation, rel_activation, stats, tot = partial_hypothetical_fitness(hybrid_GRN, S_0, S_opt, 1.0)
 
-            to_csv(activation, path*"partial_landscape.csv")
-            to_csv(rel_activation, path*"rel_partial_landscape.csv")
+                to_csv(activation, path*"partial_landscape.csv")
+                to_csv(rel_activation, path*"rel_partial_landscape.csv")
 
-            save(path[1:end-1], "prop_pos", "none", stats[1]/tot)
-            save(path[1:end-1], "prop_neg", "none", stats[2]/tot)
-            save(path[1:end-1], "prop_neu", "none", stats[3]/tot)
-            save(path[1:end-1], "prop_complete", "none", stats[4]/tot)
+                save(path[1:end-1], "prop_pos", "none", stats[1]/tot)
+                save(path[1:end-1], "prop_neg", "none", stats[2]/tot)
+                save(path[1:end-1], "prop_neu", "none", stats[3]/tot)
+                save(path[1:end-1], "prop_complete", "none", stats[4]/tot)
         end
     end
 end
