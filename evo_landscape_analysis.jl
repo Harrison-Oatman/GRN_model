@@ -7,7 +7,7 @@ function main()
     x_values = [10,30,50,70,90,110,130,150]
     # x_values = [10]
 
-    generate_partial_landscape(parent_folder, treatment_list)
+    # generate_partial_landscape(parent_folder, treatment_list)
 
     prop_pos = assemble_series(parent_folder,treatment_list,"prop_pos")
     prop_neg = assemble_series(parent_folder,treatment_list,"prop_neg")
@@ -18,6 +18,11 @@ function main()
                  "Proportion of Quadrant 3 Fitness Effects",
                  ["positive (includes complete)", "negative", "neutral", "complete"],
                  false, true)
+
+    to_csv(prop_pos, "analysis", "prop_pos", x_values)
+    to_csv(prop_neg, "analysis", "prop_neg", x_values)
+    to_csv(prop_neu, "analysis", "prop_neu", x_values)
+    to_csv(prop_complete, "analysis", "prop_complete", x_values)
 end
 
 main()
