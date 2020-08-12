@@ -14,6 +14,7 @@ include("evo_analysis_functions.jl")
 
 function main()
     parent_folder = "results_new"
+    results_folder = "analysis_new"
     # treatment_list = ["Size10","Size30","Size50","Size70","Size90","Size110"]
     treatment_list = ["Size10","Size30","Size50","Size70","Size90","Size110","Size130","Size150"]
     x_values = [10,30,50,70,90,110,130,150]
@@ -42,18 +43,18 @@ function main()
 
     produce_plots(fitness_difference,x_values,false,"Fitness difference of mutations")
 
-    # to_csv(avg_steps, "analysis", "average_steps.csv",x_values)
-    # to_csv(ancestor_conv_time, "analysis", "ancestor_conv_time.csv",x_values)
-    # to_csv(evolved_conv_time, "analysis", "evolved_conv_time.csv",x_values)
-    # to_csv(num_mutations, "analysis", "num_mutations.csv",x_values)
-    # to_csv(avg_final_connectivity, "analysis", "avg_final_connectivity.csv",x_values)
-    # to_csv(quadrants, "analysis", "quadrants.csv",x_values)
-    # to_csv(incoming, "analysis", "incoming.csv",x_values)
-    # to_csv(outgoing, "analysis", "outgoing.csv",x_values)
-    # to_csv(fitness_difference, "analysis", "fitness_difference.csv",x_values)
+    to_csv(avg_steps, results_folder, "average_steps.csv",x_values)
+    to_csv(ancestor_conv_time, results_folder, "ancestor_conv_time.csv",x_values)
+    to_csv(evolved_conv_time, results_folder, "evolved_conv_time.csv",x_values)
+    to_csv(num_mutations, results_folder, "num_mutations.csv",x_values)
+    to_csv(avg_final_connectivity, results_folder, "avg_final_connectivity.csv",x_values)
+    to_csv(quadrants, results_folder, "quadrants.csv",x_values)
+    to_csv(incoming, results_folder, "incoming.csv",x_values)
+    to_csv(outgoing, results_folder, "outgoing.csv",x_values)
+    to_csv(fitness_difference, results_folder, "fitness_difference.csv",x_values)
 
 
-    # generate_landscape_csv(parent_folder, treatment_list)
+    generate_partial_landscape(parent_folder, treatment_list)
 
     # return [quadrants,incoming,outgoing,fitness_difference]
 end
@@ -118,4 +119,4 @@ function main3()
 end
 
 println("starting analysis")
-m = main3()
+m = main()
