@@ -66,6 +66,7 @@ function create_ancestor(params::Dict{String,Any},dir)
     #sum(ancestor_S_final) ensures ancestor_S_final is not the 0 vector
     #This only works when gene values can be either 0.0 or 1.0
     while ancestor_grn_stability == false || sum(ancestor_S_final) == 0.0
+        S_0 = rand([0.0,1.0],params["genes"])
         ancestor_grn = generate_random_grn(params)
         ancestor_grn_stability, ancestor_S_final = assess_stability(ancestor_grn,S_0)
         trial_ct += 1

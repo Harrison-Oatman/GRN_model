@@ -3,6 +3,7 @@ using StatsBase
 using DataFrames
 using GLM
 using Statistics
+using Random
 
 include("sim_functions.jl")
 
@@ -45,6 +46,8 @@ function series_from_csv(path)
             push!(result, line[2:end])
         end
         close(f)
+    else
+        println("error opening", path)
     end
     return result
 end
@@ -106,9 +109,9 @@ function get_mutation_lists(parent_folder::String,treatment_list,filename::Strin
     return results
 end
 
-function produce_plots(series,x_values::Array{Int64,1},log::Bool,title::String)
+function produce_plots(series,x_values::Array{Int64,1},log::Bool,title::String, include_points=true::Bool,
+                       include_err=false::Bool)
     gr()
-    println("here")
     mean_list = Array{Float64,1}()
     error_list = Array{Float64,1}()
     if log
@@ -127,17 +130,22 @@ function produce_plots(series,x_values::Array{Int64,1},log::Bool,title::String)
         push!(error_list,sample_error)
 
         x = [x_values[i]+0.01*(j-260) for (j,_) in enumerate(arr)]
-
-        plot!(p,x,arr,seriestype = :scatter,label="")
+        if include_points
+            plot!(p,x,arr,seriestype = :scatter,label="")
+        end
     end
-    plot!(p,x_values,mean_list,label="Mean")
-    # display(p)
-    savefig(p,"analysis/"*title*".pdf")
+    if include_err
+        plot!(p,x_values,mean_list,label="Mean",yerror = error_list)
+    else
+        plot!(p,x_values,mean_list,label="Mean")
+    end
+    display(p)
+    savefig(p,"analysis/"*title*".png")
 end
 
 function produce_plots(series_list::Array{Array{Array{Float64,1},1}},x_values::Array{Int64,1},
                         log::Bool,title::String, label_list::Array{String,1},include_points=true::Bool,
-                        include_err=false::Bool)
+                        include_err=true::Bool)
     gr()
     println("here")
 
@@ -163,6 +171,7 @@ function produce_plots(series_list::Array{Array{Array{Float64,1},1}},x_values::A
             if include_points
                 plot!(p,x,arr,seriestype = :scatter,label="")
             end
+            # display(p)
         end
 
         if include_err
@@ -170,9 +179,10 @@ function produce_plots(series_list::Array{Array{Array{Float64,1},1}},x_values::A
         else
             plot!(p,x_values,mean_list,label=label_list[series_inx])
         end
+        # display(p)
     end
-    # display(p)
-    savefig(p,"analysis/"*title*".pdf")
+    display(p)
+    savefig(p,"analysis/"*title*".png")
 end
 
 function series_from_mutators(mutation_list,size_list)
@@ -370,4 +380,31 @@ function load(filename::String)
         println(filename)
         throw(error("File does not exist"))
     end
+end
+
+function bootstrap_median(series)
+    medians = Array{Float64, 1}()
+    lowers = Array{Float64, 1}()
+    uppers = Array{Float64, 1}()
+    for treatment in series
+        println("treatment")
+        median_list = Array{Float64, 1}()
+        n = length(treatment)
+        for i in 1:200
+            new_sample = sample(treatment, n)
+            # println(new_sample)
+            push!(median_list, median(new_sample))
+            println(median(new_sample))
+        end
+        push!(medians, mean(median_list))
+        push!(lowers, sort(median_list)[6])
+        push!(uppers, sort(median_list)[195])
+    end
+    return medians, lowers, uppers
+end
+
+function easy_plot(med, lower, upper, x_values, name, parent_folder)
+    p = plot(x_values, med, yerror=[(med[i] - lower[i], upper[i] - med[i]) for i in 1:(length(med))], title=name)
+    display(p)
+    savefig(p, parent_folder * "/" * name * ".pdf")
 end
