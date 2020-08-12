@@ -1,7 +1,7 @@
 include("evo_analysis_functions.jl")
 
 function main()
-    parent_folder = "results"
+    parent_folder = "results_new"
     treatment_list = ["Size10","Size30","Size50","Size70","Size90","Size110","Size130","Size150"]
     # treatment_list = ["Size10"]
     x_values = [10,30,50,70,90,110,130,150]
