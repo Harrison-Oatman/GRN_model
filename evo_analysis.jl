@@ -60,36 +60,37 @@ function main()
 end
 
 function main2()
-    num_mutations = series_from_csv("analysis/average_steps.csv")
+    num_mutations = series_from_csv("analysis_new/average_steps.csv")
     med, low, upp = bootstrap_median(num_mutations)
 
     x_values = [10,30,50,70,90,110,130,150]
 
-    easy_plot(med, low, upp, x_values, "Number of Steps to Optimum (Median)", "Analysis")
+    easy_plot(med, low, upp, x_values, "Number of Steps to Optimum (Median)", "analysis_new")
 end
 
 function main3()
     parent_folder = "results"
+    results_folder = "analysis_new"
     # treatment_list = ["Size10","Size30","Size50","Size70","Size90","Size110"]
     treatment_list = ["Size10","Size30","Size50","Size70","Size90","Size110","Size130","Size150"]
     x_values = [10,30,50,70,90,110,130,150]
 
-    num_mutations = series_from_csv("analysis/num_mutations.csv")
+    num_mutations = series_from_csv(results_folder * "/num_mutations.csv")
 
-    ancestor_conv_time = series_from_csv("analysis/ancestor_conv_time.csv")
-    evolved_conv_time = series_from_csv("analysis/evolved_conv_time.csv")
+    ancestor_conv_time = series_from_csv(results_folder * "/ancestor_conv_time.csv")
+    evolved_conv_time = series_from_csv(results_folder * "/evolved_conv_time.csv")
 
-    avg_steps = series_from_csv("analysis/average_steps.csv")
+    avg_steps = series_from_csv(results_folder * "/average_steps.csv")
 
-    avg_final_connectivity = series_from_csv("analysis/avg_final_connectivity.csv")
+    avg_final_connectivity = series_from_csv(results_folder * "/avg_final_connectivity.csv")
     print(avg_final_connectivity)
     # mutation_list = series_from_csv("analysis/ancestor_conv_time.csv")
 
-    quadrants = series_from_csv("analysis/quadrants.csv")
-    incoming = series_from_csv("analysis/incoming.csv")
-    outgoing = series_from_csv("analysis/outgoing.csv")
+    quadrants = series_from_csv(results_folder * "/quadrants.csv")
+    incoming = series_from_csv(results_folder * "/incoming.csv")
+    outgoing = series_from_csv(results_folder * "/outgoing.csv")
     # quadrants = series_from_csv("analysis/ancestor_conv_time.csv")
-    fitness_difference = series_from_csv("analysis/fitness_difference.csv")
+    fitness_difference = series_from_csv(results_folder * "/fitness_difference.csv")
 
     produce_plots(num_mutations,x_values,false,"Number of mutations to optimal",false, true)
     produce_plots([ancestor_conv_time,evolved_conv_time],x_values,false,"Convergence time",["ancestor","evolved"], false)
@@ -119,4 +120,4 @@ function main3()
 end
 
 println("starting analysis")
-m = main()
+m = main2()

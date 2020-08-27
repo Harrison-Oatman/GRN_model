@@ -140,7 +140,7 @@ function produce_plots(series,x_values::Array{Int64,1},log::Bool,title::String, 
         plot!(p,x_values,mean_list,label="Mean")
     end
     display(p)
-    savefig(p,"analysis/"*title*".png")
+    savefig(p,"analysis_new/"*title*".png")
 end
 
 function produce_plots(series_list::Array{Array{Array{Float64,1},1}},x_values::Array{Int64,1},
@@ -182,8 +182,10 @@ function produce_plots(series_list::Array{Array{Array{Float64,1},1}},x_values::A
         # display(p)
     end
     display(p)
-    savefig(p,"analysis/"*title*".png")
+    savefig(p,"analysis_new/"*title*".png")
 end
+
+
 
 function series_from_mutators(mutation_list,size_list)
     quadrants = Array{Array{Int64,1},1}()
