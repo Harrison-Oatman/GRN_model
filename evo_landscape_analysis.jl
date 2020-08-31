@@ -7,7 +7,7 @@ function main()
     x_values = [10,30,50,70,90,110,130,150]
     # x_values = [10]
 
-    # generate_partial_landscape(parent_folder, treatment_list)
+    generate_partial_landscape(parent_folder, treatment_list)
 
     prop_pos = assemble_series(parent_folder,treatment_list,"prop_pos")
     prop_neg = assemble_series(parent_folder,treatment_list,"prop_neg")

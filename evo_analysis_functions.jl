@@ -185,8 +185,6 @@ function produce_plots(series_list::Array{Array{Array{Float64,1},1}},x_values::A
     savefig(p,"analysis_new/"*title*".png")
 end
 
-
-
 function series_from_mutators(mutation_list,size_list)
     quadrants = Array{Array{Int64,1},1}()
     incoming = Array{Array{Int64,1},1}()
